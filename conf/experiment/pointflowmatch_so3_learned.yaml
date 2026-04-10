@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - override /model: flow_so3
+
+model:
+  so3_init_mode: learned
+  so3_prior_ckpt_name: null
+  so3_prior_ckpt_episode: latest-rank0.pt

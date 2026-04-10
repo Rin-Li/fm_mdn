@@ -1,0 +1,11 @@
+**/__pycache__/**
+**/outputs/**
+**/multirun/**
+**/wandb/**
+**/ckpt/**
+**/demos/**
+**.html
+**/toy_circle/results/**
+*plot.png
+*.svg
+.vscode/

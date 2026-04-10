@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - override /model: flow
+  - override /backbone: resnet_dp
+
+obs_mode: rgb  # pcd | rgb
+obs_features_dim: 512
+x_dim: "${eval: '${obs_features_dim} * 5 + ${y_dim}'}"
+
+dataset:
+  use_pcd_color: null
+  n_points: null
+
+model:
+  _target_: pfp.policy.fm_policy.FMPolicyImage
+  augment_data: False  # done in backbone

@@ -1,0 +1,3 @@
+  _target_: pfp.backbones.mlp_3dp.MLP3DP
+  in_channels: "${eval: '6 if ${dataset.use_pc_color} else 3'}"
+  out_channels: ${obs_features_dim}

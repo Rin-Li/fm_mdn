@@ -1,0 +1,34 @@
+# @package _global_
+defaults:
+  - override /model: flow
+  - override /backbone: resnet_dp
+
+obs_mode: rgb  # pcd | rgb
+n_pred_steps: 16  # Must be divisible by 4
+obs_features_dim: 512
+x_dim: "${eval: '${obs_features_dim} * 5 + ${y_dim}'}"
+
+dataset:
+  n_obs_steps: ${n_obs_steps}
+  n_pred_steps: ${n_pred_steps}
+  subs_factor: 1
+  use_pcd_color: null
+  n_points: null
+
+dataloader:
+  batch_size: 64
+
+model:
+  _target_: pfp.policy.fm_policy.FMPolicyImage
+  augment_data: False  # done in backbone
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 1.0e-4
+  betas: [0.95, 0.999]
+  eps: 1.0e-8
+  weight_decay: 1.0e-6
+
+lr_scheduler:
+  name: cosine  # constant | cosine | linear | ...
+  num_warmup_steps: 500

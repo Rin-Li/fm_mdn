@@ -1,0 +1,20 @@
+seed: 5678
+log_wandb: False
+
+env_runner:
+  num_episodes: 100
+  max_episode_length: 200
+  verbose: True
+  env_config:
+    voxel_size: 0.01
+    headless: True
+    vis: True
+
+
+policy:
+  ckpt_name: 1717446544-didactic-woodpecker
+  ckpt_episode: ep1500  # latest, ep1500, ep1000
+  num_k_infer: 50
+  # Uncomment the following to override settings used during training
+  # flow_schedule: linear  # linear | cosine | exp
+  # exp_scale: 4.0

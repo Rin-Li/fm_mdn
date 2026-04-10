@@ -1,0 +1,40 @@
+  _target_: pfp.policy.ddim_policy.DDIMPolicy
+  x_dim: ${x_dim}
+  y_dim: ${y_dim}
+  n_obs_steps: ${n_obs_steps}
+  n_pred_steps: ${n_pred_steps}
+  num_k_train: 100
+  num_k_infer: 10
+  norm_pcd_center: [0.4, 0.0, 1.4]
+  augment_data: False
+
+  obs_encoder: ${backbone}
+  
+  diffusion_net:
+    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
+    input_dim: ${y_dim}
+    global_cond_dim: "${eval: '${x_dim} * ${n_obs_steps}'}"
+    diffusion_step_embed_dim: 256
+    down_dims: [256, 512, 1024]
+    kernel_size: 5
+    n_groups: 8
+    cond_predict_scale: True
+  
+  noise_scheduler_train:
+    _target_: diffusers.schedulers.scheduling_ddim.DDIMScheduler
+    num_train_timesteps: ${model.num_k_train}
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: squaredcos_cap_v2
+    clip_sample: True
+    set_alpha_to_one: True
+    steps_offset: 0
+    prediction_type: epsilon
+    # rescale_betas_zero_snr: True
+    # prediction_type: v_prediction
+    # timestep_spacing: trailing
+
+  loss_weights:
+    xyz: 10.0
+    rot6d: 10.0
+    grip: 1.0

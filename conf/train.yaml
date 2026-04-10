@@ -1,0 +1,53 @@
+seed: 1234
+epochs: 1500
+log_wandb: False
+task_name: unplug_charger
+obs_features_dim: 256
+y_dim: 10  # (xyz, rot6d, g)
+x_dim: "${eval: '${obs_features_dim} + ${y_dim}'}"
+n_obs_steps: 2
+n_pred_steps: 32  # Must be divisible by 4
+use_ema: True
+save_each_n_epochs: 500
+obs_mode: pcd  # pcd | rgb
+run_name: null  # set this to continue training from previous ckpt
+
+
+# env_runner:
+#   num_episodes: 20
+#   max_episode_length: 200
+#   task_name: ${task_name}
+#   env_config:
+#     seed: 1996
+#     lowdim_obs: False
+
+
+dataset:
+  n_obs_steps: ${n_obs_steps}
+  n_pred_steps: ${n_pred_steps}
+  subs_factor: 3
+  use_pc_color: False
+  n_points: 4096
+
+
+dataloader:
+  batch_size: 128
+  num_workers: 0
+  # pin_memory: True
+
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 3.0e-5
+  betas: [0.95, 0.999]
+  eps: 1.0e-8
+  weight_decay: 1.0e-6
+
+lr_scheduler:
+  name: cosine  # constant | cosine | linear | ...
+  num_warmup_steps: 5000
+
+
+defaults:
+  - model: flow
+  - backbone: pointnet

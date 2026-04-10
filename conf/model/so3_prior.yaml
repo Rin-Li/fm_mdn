@@ -1,0 +1,14 @@
+  _target_: pfp.policy.so3_prior_policy.SO3PriorPolicy
+  x_dim: ${x_dim}
+  n_obs_steps: ${n_obs_steps}
+  n_pred_steps: ${n_pred_steps}
+  norm_pcd_center: [0.4, 0.0, 1.4]
+  augment_data: False
+
+  obs_encoder: ${backbone}
+
+  prior_head:
+    _target_: pfp.policy.so3_prior_policy.SO3AutoregressiveMixtureHead
+    cond_dim: "${eval: '${x_dim} * ${n_obs_steps}'}"
+    hidden_dim: 512
+    q_mix: 5

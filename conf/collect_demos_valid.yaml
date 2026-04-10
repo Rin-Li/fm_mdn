@@ -1,0 +1,12 @@
+mode: valid
+seed: 5678
+num_episodes: 10
+save_data: False
+
+
+env_config:
+  task_name: open_fridge
+  voxel_size: 0.01
+  n_points: 5500
+  headless: True
+  vis: False

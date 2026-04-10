@@ -1,0 +1,12 @@
+mode: train
+seed: 1234
+num_episodes: 100
+save_data: False
+
+
+env_config:
+  task_name: take_lid_off_saucepan
+  voxel_size: 0.01
+  n_points: 5500
+  headless: True
+  vis: True

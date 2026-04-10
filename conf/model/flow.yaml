@@ -1,0 +1,33 @@
+  _target_: pfp.policy.fm_policy.FMPolicy
+  x_dim: ${x_dim}
+  y_dim: ${y_dim}
+  n_obs_steps: ${n_obs_steps}
+  n_pred_steps: ${n_pred_steps}
+  num_k_infer: 10
+  time_conditioning: True
+  norm_pcd_center: [0.4, 0.0, 1.4]
+  augment_data: False
+  noise_type: gaussian  # gaussian | trajectory | igso3
+  noise_scale: 1.0
+  loss_type: l2  # l2 | l1
+  flow_schedule: exp  # linear | cosine | exp
+  exp_scale: 4.0
+  snr_sampler: uniform  # uniform | logit_normal
+
+  obs_encoder: ${backbone}
+  
+  diffusion_net:
+    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
+    input_dim: ${y_dim}
+    global_cond_dim: "${eval: '${x_dim} * ${n_obs_steps}'}"
+    diffusion_step_embed_dim: "${eval: '256 if ${model.time_conditioning} else 0'}"
+    down_dims: [256, 512, 1024]
+    kernel_size: 5
+    n_groups: 8
+    cond_predict_scale: True
+    use_dropout: False
+
+  loss_weights:
+    xyz: 10.0
+    rot6d: 10.0
+    grip: 1.0

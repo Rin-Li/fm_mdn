@@ -1,0 +1,5 @@
+seed: 5678
+log_wandb: False
+run_name: 1716560279-subtle-kestrel  # previous ckpt
+model:
+  num_k_infer: 5
