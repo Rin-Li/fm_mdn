@@ -9,3 +9,4 @@
 *plot.png
 *.svg
 .vscode/
+.venv/

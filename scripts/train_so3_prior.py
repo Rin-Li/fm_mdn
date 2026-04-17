@@ -79,7 +79,7 @@ def main(cfg: OmegaConf):
         save_num_checkpoints_to_keep=3,
         algorithms=[EMA()] if cfg.use_ema else None,
         run_name=cfg.run_name,
-        autoresume=True if cfg.run_name is not None else False,
+        autoresume=True if (cfg.run_name is not None and cfg.log_wandb) else False,
         spin_dataloaders=False,
     )
     wandb.watch(composer_model)

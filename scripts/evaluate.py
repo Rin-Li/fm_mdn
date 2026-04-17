@@ -42,11 +42,12 @@ def main(cfg: OmegaConf):
     if cfg.env_runner.env_config.vis:
         RV("pfp_evaluate")
     wandb.init(
-        project="pfp-eval-rebuttal",
-        entity="rl-lab-chisari",
-        config=OmegaConf.to_container(cfg),
-        mode="online" if cfg.log_wandb else "disabled",
-    )
+            project="pfp-eval-rebuttal",
+
+            entity="lyl20010824-the-university-of-tokyo-hospital", 
+            config=OmegaConf.to_container(cfg),
+            mode="online" if cfg.log_wandb else "disabled",
+        )
     policy: BasePolicy = hydra.utils.instantiate(cfg.policy)
     env_runner = RLBenchRunner(**cfg.env_runner)
     _ = env_runner.run(policy)

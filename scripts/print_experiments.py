@@ -13,7 +13,6 @@ CHAINED_DIFF_RESULTS = [
     {"task_name": "take_shoes_out_of_box", "exp_name": "chain_dif", "success_rate": 9},
 ]
 
-
 def exp_name_from_run(run_config: dict) -> str:
     model = run_config["model"]["_target_"]
     backbone = run_config["model"]["obs_encoder"]["_target_"]
