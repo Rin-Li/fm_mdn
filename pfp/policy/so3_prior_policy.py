@@ -194,8 +194,14 @@ class SO3PriorPolicy(ComposerModel):
             batch_idx = torch.arange(prev_rot6d.shape[0], device=prev_rot6d.device)
             mu_sel = mu_rot6d[batch_idx, idx]
             sigma_sel = sigma[batch_idx, idx].unsqueeze(-1)
-            noise = torch.randn_like(mu_sel) * sigma_sel
-            sample_rot6d = mu_sel + noise
+
+            # Sample in the tangent space around the component mean, then map back to SO(3).
+            mu_rotmat = rot6d_to_rotmat_th(mu_sel)
+            mu_so3 = pp.mat2SO3(mu_rotmat, check=False)
+            tangent_noise = pp.so3(torch.randn((*mu_sel.shape[:-1], 3), device=mu_sel.device))
+            sample_so3 = mu_so3 @ pp.Exp(tangent_noise * sigma_sel)
+            sample_rotmat = pp.matrix(sample_so3)
+            sample_rot6d = sample_rotmat[..., :3, :2].mT.flatten(start_dim=-2)
             samples.append(sample_rot6d)
             prev_rot6d = sample_rot6d
         return torch.stack(samples, dim=1)
