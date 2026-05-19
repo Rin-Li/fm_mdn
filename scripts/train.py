@@ -94,15 +94,16 @@ def main(cfg: OmegaConf):
     wandb.finish()
     trainer.close()
 
-    _ = subprocess.Popen(
-        [
-            "bash",
-            "bash/start_eval.sh",
-            f"{os.environ['CUDA_VISIBLE_DEVICES']}",
-            f"{run_name}",
-        ],
-        start_new_session=True,
-    )
+    if cfg.auto_eval:
+        _ = subprocess.Popen(
+            [
+                "bash",
+                "bash/start_eval.sh",
+                f"{os.environ['CUDA_VISIBLE_DEVICES']}",
+                f"{run_name}",
+            ],
+            start_new_session=True,
+        )
     return
 
 

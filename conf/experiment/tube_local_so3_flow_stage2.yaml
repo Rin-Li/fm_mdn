@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - override /model: tube_local_so3_flow
+
+model:
+  training_stage: flow
+  freeze_tube_predictor: True
+  inference_init: zero

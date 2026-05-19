@@ -11,6 +11,7 @@ use_ema: True
 save_each_n_epochs: 500
 obs_mode: pcd  # pcd | rgb
 run_name: null  # set this to continue training from previous ckpt
+auto_eval: True  # launch bash/start_eval.sh automatically after training
 
 
 # env_runner:
