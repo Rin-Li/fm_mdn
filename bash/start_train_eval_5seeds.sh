@@ -12,26 +12,41 @@ repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 script_path="${repo_dir}/bash/$(basename "${BASH_SOURCE[0]}")"
 session_name="train_eval_${gpu_id}_${task_name}_${experiment}_${run_name}"
 session_name="${session_name//[^A-Za-z0-9_]/_}"
+log_path="${repo_dir}/logs/${session_name}.log"
 
-if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]] && command -v tmux >/dev/null 2>&1; then
+if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" == "1" && -n "${PFP_TRAIN_EVAL_LOG:-}" ]]; then
+    mkdir -p "$(dirname "${PFP_TRAIN_EVAL_LOG}")"
+    exec > >(tee -a "${PFP_TRAIN_EVAL_LOG}") 2>&1
+    trap 'status=$?; if [[ ${status} -ne 0 ]]; then echo "Failed with exit code ${status}. Log: ${PFP_TRAIN_EVAL_LOG}"; [[ -n "${TMUX:-}" ]] && exec bash; fi' EXIT
+fi
+
+if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]] \
+    && [[ "${PFP_NO_TMUX:-0}" != "1" ]] \
+    && command -v tmux >/dev/null 2>&1; then
     tmux new-session -d -s "${session_name}" \
-        "PFP_TRAIN_EVAL_INSIDE=1 bash '${script_path}' '$gpu_id' '$task_name' '$experiment' '$k_steps' '$num_seeds' '$run_name'"
+        "PFP_TRAIN_EVAL_INSIDE=1 PFP_TRAIN_EVAL_LOG='${log_path}' bash '${script_path}' '$gpu_id' '$task_name' '$experiment' '$k_steps' '$num_seeds' '$run_name'"
     echo "Started tmux session: ${session_name}"
     echo "Run name: ${run_name}"
+    echo "Log file: ${log_path}"
     echo "Attach with: tmux attach -t ${session_name}"
     exit 0
 fi
 
 if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]]; then
-    echo "tmux not found; running train/eval in the current shell."
+    echo "tmux not found or disabled; running train/eval in the current shell."
 fi
 
 cd "${repo_dir}"
-if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+if [[ -n "${VIRTUAL_ENV:-}" && -f "${VIRTUAL_ENV}/bin/activate" ]]; then
+    source "${VIRTUAL_ENV}/bin/activate"
     echo "Using active virtualenv: ${VIRTUAL_ENV}"
+elif [[ -f "${repo_dir}/.venv/bin/activate" ]]; then
+    source "${repo_dir}/.venv/bin/activate"
+    echo "Using repo virtualenv: ${repo_dir}/.venv"
 elif command -v conda >/dev/null 2>&1; then
     eval "$(conda shell.bash hook)"
     conda activate "${PFP_CONDA_ENV:-pfp_env}"
+    echo "Using conda env: ${PFP_CONDA_ENV:-pfp_env}"
 else
     echo "No conda or active virtualenv detected; using current python."
 fi
