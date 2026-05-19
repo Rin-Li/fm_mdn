@@ -13,7 +13,7 @@ script_path="${repo_dir}/bash/$(basename "${BASH_SOURCE[0]}")"
 session_name="train_eval_${gpu_id}_${task_name}_${experiment}_${run_name}"
 session_name="${session_name//[^A-Za-z0-9_]/_}"
 
-if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]]; then
+if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]] && command -v tmux >/dev/null 2>&1; then
     tmux new-session -d -s "${session_name}" \
         "PFP_TRAIN_EVAL_INSIDE=1 bash '${script_path}' '$gpu_id' '$task_name' '$experiment' '$k_steps' '$num_seeds' '$run_name'"
     echo "Started tmux session: ${session_name}"
@@ -22,9 +22,19 @@ if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]]; then
     exit 0
 fi
 
+if [[ "${PFP_TRAIN_EVAL_INSIDE:-0}" != "1" ]]; then
+    echo "tmux not found; running train/eval in the current shell."
+fi
+
 cd "${repo_dir}"
-eval "$(conda shell.bash hook)"
-conda activate pfp_env
+if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+    echo "Using active virtualenv: ${VIRTUAL_ENV}"
+elif command -v conda >/dev/null 2>&1; then
+    eval "$(conda shell.bash hook)"
+    conda activate "${PFP_CONDA_ENV:-pfp_env}"
+else
+    echo "No conda or active virtualenv detected; using current python."
+fi
 export CUDA_VISIBLE_DEVICES="${gpu_id}"
 export WANDB__SERVICE_WAIT=300
 
