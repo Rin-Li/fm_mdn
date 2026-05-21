@@ -16,6 +16,8 @@ stage2_use_ema=${PFP_STAGE2_USE_EMA:-True}
 stage1_freeze_encoder=${PFP_STAGE1_FREEZE_ENCODER:-True}
 stage1_lr=${PFP_STAGE1_LR:-1.0e-4}
 stage2_lr=${PFP_STAGE2_LR:-3.0e-5}
+stage1_warmup=${PFP_STAGE1_WARMUP:-0}
+stage2_warmup=${PFP_STAGE2_WARMUP:-5000}
 n_points_override=${PFP_N_POINTS:-}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -81,6 +83,7 @@ echo "Debug stats: ${debug_stats}, interval=${debug_stats_interval}"
 echo "EMA: stage1=${stage1_use_ema}, stage2=${stage2_use_ema}"
 echo "Stage 1 freeze encoder: ${stage1_freeze_encoder}"
 echo "Learning rates: stage1=${stage1_lr}, stage2=${stage2_lr}"
+echo "Warmup steps: stage1=${stage1_warmup}, stage2=${stage2_warmup}"
 if [[ -n "${n_points_override}" ]]; then
     echo "Point cloud points override: ${n_points_override}"
 fi
@@ -94,6 +97,7 @@ stage1_overrides=(
     save_each_n_epochs="${stage1_epochs}"
     use_ema="${stage1_use_ema}"
     optimizer.lr="${stage1_lr}"
+    lr_scheduler.num_warmup_steps="${stage1_warmup}"
     auto_eval=False
     model.freeze_obs_encoder="${stage1_freeze_encoder}"
     model.debug_stats="${debug_stats}"
@@ -109,6 +113,7 @@ stage2_overrides=(
     save_each_n_epochs="${stage2_epochs}"
     use_ema="${stage2_use_ema}"
     optimizer.lr="${stage2_lr}"
+    lr_scheduler.num_warmup_steps="${stage2_warmup}"
     auto_eval=False
     model.debug_stats="${debug_stats}"
     model.debug_stats_interval="${debug_stats_interval}"

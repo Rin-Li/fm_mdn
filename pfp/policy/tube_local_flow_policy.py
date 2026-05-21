@@ -434,7 +434,11 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         robot_state_obs: torch.Tensor,
         robot_state_pred: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
-        cond = self.obs_encoder(pcd, robot_state_obs)
+        if self.freeze_obs_encoder:
+            with torch.no_grad():
+                cond = self.obs_encoder(pcd, robot_state_obs)
+        else:
+            cond = self.obs_encoder(pcd, robot_state_obs)
         pos, rot, gripper = self._pfp_to_pose(robot_state_pred)
 
         detach_tube = self.training_stage == "flow" and self.freeze_tube_predictor
