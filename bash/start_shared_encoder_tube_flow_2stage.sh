@@ -14,7 +14,7 @@ debug_stats_interval=${PFP_DEBUG_STATS_INTERVAL:-1}
 stage1_use_ema=${PFP_STAGE1_USE_EMA:-False}
 stage2_use_ema=${PFP_STAGE2_USE_EMA:-True}
 stage1_freeze_encoder=${PFP_STAGE1_FREEZE_ENCODER:-True}
-stage1_lr=${PFP_STAGE1_LR:-1.0e-5}
+stage1_lr=${PFP_STAGE1_LR:-1.0e-4}
 stage2_lr=${PFP_STAGE2_LR:-3.0e-5}
 n_points_override=${PFP_N_POINTS:-}
 

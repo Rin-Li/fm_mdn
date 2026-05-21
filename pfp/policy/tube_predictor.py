@@ -32,7 +32,7 @@ class TubePredictor(nn.Module):
         self._init_head(head)
 
     def _init_head(self, head: nn.Linear) -> None:
-        nn.init.zeros_(head.weight)
+        nn.init.normal_(head.weight, mean=0.0, std=1e-4)
         nn.init.zeros_(head.bias)
         with torch.no_grad():
             bias = head.bias.view(self.horizon, self.out_dim)
