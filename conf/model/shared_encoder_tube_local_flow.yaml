@@ -1,0 +1,60 @@
+  _target_: pfp.policy.tube_local_flow_policy.TubeLocalFlowPolicy
+  x_dim: ${x_dim}
+  y_dim: ${y_dim}
+  n_obs_steps: ${n_obs_steps}
+  n_pred_steps: ${n_pred_steps}
+  num_k_infer: 10
+  time_conditioning: True
+  norm_pcd_center: [0.4, 0.0, 1.4]
+  augment_data: False
+  loss_type: l2  # l2 | l1
+  flow_schedule: exp  # linear | cosine | exp
+  exp_scale: 4.0
+  snr_sampler: uniform  # uniform | logit_normal
+  training_stage: tube  # tube | flow | joint
+  include_gripper: False
+  freeze_tube_predictor: False
+  freeze_obs_encoder: False
+  flow_gripper_mode: last_obs  # last_obs | zero
+  init_ckpt_name: null
+  init_ckpt_episode: latest-rank0.pt
+  tube_radius: 1.0471975512  # pi / 3
+  residual_radius_factor: 0.8
+  n_ctrl: 8
+  sigma_p: 0.03
+  sigma_r: 0.15
+  sigma_g: 0.1
+  inference_init: zero  # zero | smooth_noise
+
+  obs_encoder: ${backbone}
+
+  tube_predictor:
+    _target_: pfp.policy.tube_predictor.TubePredictor
+    cond_dim: "${eval: '${x_dim} * ${n_obs_steps}'}"
+    horizon: ${n_pred_steps}
+    hidden_dim: 512
+    predict_gripper: False
+
+  diffusion_net:
+    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
+    input_dim: 15  # residual(6) + tube center feature(9)
+    output_dim: 6
+    global_cond_dim: "${eval: '${x_dim} * ${n_obs_steps}'}"
+    diffusion_step_embed_dim: "${eval: '256 if ${model.time_conditioning} else 0'}"
+    down_dims: [256, 512, 1024]
+    kernel_size: 5
+    n_groups: 8
+    cond_predict_scale: True
+    use_dropout: False
+
+  loss_weights:
+    center_xyz: 10.0
+    center_so3: 10.0
+    center_grip: 0.0
+    chart: 10.0
+    smooth_xyz: 0.1
+    smooth_so3: 0.1
+    fm_xyz: 10.0
+    fm_so3: 10.0
+    fm_grip: 0.0
+    chart_fm: 1.0

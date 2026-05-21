@@ -53,6 +53,10 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         sigma_r: float = 0.15,
         sigma_g: float = 0.1,
         inference_init: str = "zero",
+        flow_gripper_mode: str = "last_obs",
+        init_ckpt_name: str | None = None,
+        init_ckpt_episode: str = "latest-rank0.pt",
+        freeze_obs_encoder: bool = False,
         subs_factor: int = 1,
     ) -> None:
         ComposerModel.__init__(self)
@@ -61,6 +65,8 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
             raise ValueError(f"Unknown training_stage: {training_stage}")
         if inference_init not in ["zero", "smooth_noise"]:
             raise ValueError(f"Unknown inference_init: {inference_init}")
+        if flow_gripper_mode not in ["last_obs", "zero"]:
+            raise ValueError(f"Unknown flow_gripper_mode: {flow_gripper_mode}")
 
         self.x_dim = x_dim
         self.y_dim = y_dim
@@ -89,10 +95,20 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         self.sigma_r = sigma_r
         self.sigma_g = sigma_g
         self.inference_init = inference_init
+        self.flow_gripper_mode = flow_gripper_mode
+        self.init_ckpt_name = init_ckpt_name
+        self.init_ckpt_episode = init_ckpt_episode
+        self.freeze_obs_encoder = freeze_obs_encoder
         self.residual_dim = 7 if include_gripper else 6
+
+        if init_ckpt_name is not None:
+            self._load_shared_encoder_tube(init_ckpt_name, init_ckpt_episode)
 
         if freeze_tube_predictor:
             for param in self.tube_predictor.parameters():
+                param.requires_grad_(False)
+        if freeze_obs_encoder:
+            for param in self.obs_encoder.parameters():
                 param.requires_grad_(False)
 
         if loss_type == "l2":
@@ -101,6 +117,27 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
             self.loss_fun = nn.L1Loss()
         else:
             raise NotImplementedError
+
+    def _load_shared_encoder_tube(self, ckpt_name: str, ckpt_episode: str) -> None:
+        ckpt_dir = REPO_DIRS.CKPT / ckpt_name
+        ckpt_path_list = list(ckpt_dir.glob(f"{ckpt_episode}*"))
+        assert len(ckpt_path_list) > 0, f"No checkpoint found in {ckpt_dir} with {ckpt_episode}"
+        assert len(ckpt_path_list) < 2, f"Multiple ckpts found in {ckpt_dir} with {ckpt_episode}"
+        state_dict = torch.load(ckpt_path_list[0], map_location=DEVICE)["state"]["model"]
+        own_state = self.state_dict()
+        shared_state = {
+            key: value
+            for key, value in state_dict.items()
+            if (key.startswith("obs_encoder.") or key.startswith("tube_predictor."))
+            and key in own_state
+            and own_state[key].shape == value.shape
+        }
+        missing = self.load_state_dict(shared_state, strict=False)
+        if len(shared_state) == 0:
+            raise RuntimeError(f"No shared encoder/tube weights loaded from {ckpt_path_list[0]}")
+        unexpected = list(missing.unexpected_keys)
+        if unexpected:
+            raise RuntimeError(f"Unexpected keys while loading shared weights: {unexpected}")
 
     def set_num_k_infer(self, num_k_infer: int):
         self.num_k_infer = num_k_infer
@@ -196,10 +233,13 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         self,
         residual: torch.Tensor,
         tube: dict[str, torch.Tensor],
+        robot_state_obs: torch.Tensor | None = None,
     ) -> torch.Tensor:
         pos, rot = decode_residual(residual[..., :6], tube["mu_p"], tube["mu_R"])
         if self.include_gripper:
             gripper = tube["mu_g"] + residual[..., 6:7]
+        elif self.flow_gripper_mode == "last_obs" and robot_state_obs is not None:
+            gripper = robot_state_obs[:, -1:, 9:10].expand(-1, residual.shape[1], -1)
         else:
             gripper = torch.zeros((*residual.shape[:-1], 1), device=residual.device)
         return self._pose_to_pfp(pos, rot, gripper)
@@ -355,10 +395,7 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         losses = self._tube_losses(pos, rot, gripper, tube)
 
         if self.training_stage in ["flow", "joint"]:
-            flow_tube = tube if self.training_stage == "joint" else self._predict_tube(
-                cond, detach_tube=self.freeze_tube_predictor
-            )
-            losses.update(self._flow_losses(cond, pos, rot, gripper, flow_tube))
+            losses.update(self._flow_losses(cond, pos, rot, gripper, tube))
             total = self._flow_loss_total(losses)
             if self.training_stage == "joint":
                 total = total + self._tube_loss_total(losses)
@@ -410,7 +447,7 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         else:
             residual = self._zero_base_residual(batch_size, device)
 
-        traj = [self._decode_action(residual, tube)]
+        traj = [self._decode_action(residual, tube, robot_state_obs)]
         t0, dt = get_timesteps(self.flow_schedule, self.num_k_infer, exp_scale=self.exp_scale)
         t0 = t0.to(device)
         dt = dt.to(device)
@@ -421,7 +458,7 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
             vel = self.diffusion_net(flow_input, model_time, global_cond=cond)
             residual = residual.detach().clone() + vel * dt[i]
             residual[..., 3:6] = clamp_norm(residual[..., 3:6], self.tube_radius)
-            traj.append(self._decode_action(residual, tube))
+            traj.append(self._decode_action(residual, tube, robot_state_obs))
 
         return torch.stack(traj) if return_traj else traj[-1]
 

@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - override /model: shared_encoder_tube_local_flow
+
+model:
+  training_stage: flow
+  freeze_tube_predictor: True
+  freeze_obs_encoder: True
+  include_gripper: False
+  inference_init: zero
