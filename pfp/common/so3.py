@@ -106,12 +106,26 @@ def so3_log(rot: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
 
 def rotation_6d_to_matrix(rot6d: torch.Tensor) -> torch.Tensor:
     """Convert this repository's 6D rotation convention (..., 6) to SO(3)."""
+    rot6d = torch.nan_to_num(rot6d, nan=0.0, posinf=0.0, neginf=0.0)
     x_raw = rot6d[..., :3]
     y_raw = rot6d[..., 3:6]
-    x = F.normalize(x_raw, dim=-1)
-    y = y_raw - (x * y_raw).sum(dim=-1, keepdim=True) * x
-    y = F.normalize(y, dim=-1)
+    fallback_x = torch.zeros_like(x_raw)
+    fallback_x[..., 0] = 1.0
+    fallback_y = torch.zeros_like(y_raw)
+    fallback_y[..., 1] = 1.0
+
+    x_norm = x_raw.norm(dim=-1, keepdim=True)
+    x = torch.where(x_norm > 1e-6, x_raw / x_norm.clamp_min(1e-6), fallback_x)
+
+    y_orth = y_raw - (x * y_raw).sum(dim=-1, keepdim=True) * x
+    y_norm = y_orth.norm(dim=-1, keepdim=True)
+    y = torch.where(y_norm > 1e-6, y_orth / y_norm.clamp_min(1e-6), fallback_y)
+    y = y - (x * y).sum(dim=-1, keepdim=True) * x
+    y = F.normalize(y, dim=-1, eps=1e-6)
+
     z = torch.cross(x, y, dim=-1)
+    z = F.normalize(z, dim=-1, eps=1e-6)
+    y = torch.cross(z, x, dim=-1)
     return torch.stack([x, y, z], dim=-1)
 
 

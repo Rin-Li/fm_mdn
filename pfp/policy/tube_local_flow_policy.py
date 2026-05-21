@@ -57,6 +57,8 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         init_ckpt_name: str | None = None,
         init_ckpt_episode: str = "latest-rank0.pt",
         freeze_obs_encoder: bool = False,
+        debug_stats: bool = False,
+        debug_stats_interval: int = 1,
         subs_factor: int = 1,
     ) -> None:
         ComposerModel.__init__(self)
@@ -99,6 +101,9 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         self.init_ckpt_name = init_ckpt_name
         self.init_ckpt_episode = init_ckpt_episode
         self.freeze_obs_encoder = freeze_obs_encoder
+        self.debug_stats = debug_stats
+        self.debug_stats_interval = debug_stats_interval
+        self._debug_step = 0
         self.residual_dim = 7 if include_gripper else 6
 
         if init_ckpt_name is not None:
@@ -138,6 +143,38 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         unexpected = list(missing.unexpected_keys)
         if unexpected:
             raise RuntimeError(f"Unexpected keys while loading shared weights: {unexpected}")
+
+    def _debug_tensor_stats(self, name: str, tensor: torch.Tensor) -> None:
+        tensor_detached = tensor.detach()
+        finite = torch.isfinite(tensor_detached)
+        finite_count = finite.sum().item()
+        total_count = tensor_detached.numel()
+        if finite_count == 0:
+            print(f"[tube-debug] {name}: shape={tuple(tensor.shape)} finite=0/{total_count}")
+            return
+        vals = tensor_detached[finite].float()
+        print(
+            "[tube-debug] "
+            f"{name}: shape={tuple(tensor.shape)} finite={finite_count}/{total_count} "
+            f"min={vals.min().item():.6g} max={vals.max().item():.6g} "
+            f"mean={vals.mean().item():.6g} std={vals.std(unbiased=False).item():.6g}"
+        )
+
+    def _debug_policy_stats(
+        self,
+        tag: str,
+        tensors: dict[str, torch.Tensor],
+        force: bool = False,
+    ) -> None:
+        if not self.debug_stats:
+            return
+        interval = max(int(self.debug_stats_interval), 1)
+        if not force and self._debug_step % interval != 0:
+            return
+        print(f"[tube-debug] step={self._debug_step} tag={tag}")
+        for name, tensor in tensors.items():
+            if tensor is not None:
+                self._debug_tensor_stats(name, tensor)
 
     def set_num_k_infer(self, num_k_infer: int):
         self.num_k_infer = num_k_infer
@@ -306,7 +343,7 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         rot: torch.Tensor,
         gripper: torch.Tensor,
         tube: dict[str, torch.Tensor],
-    ) -> dict[str, torch.Tensor]:
+    ) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         batch_size = pos.shape[0]
         device = pos.device
         y1 = self._target_residual(pos, rot, gripper, tube)
@@ -331,7 +368,17 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
             losses["fm_grip"] = self.loss_fun(pred_vel[..., 6:7], target_vel[..., 6:7])
         else:
             losses["fm_grip"] = pos.new_zeros(())
-        return losses
+        debug_tensors = {
+            "y0": y0,
+            "y1": y1,
+            "ys": ys,
+            "target_vel": target_vel,
+            "flow_input": flow_input,
+            "pred_vel": pred_vel,
+            "flow_time": s,
+            "xi_norm": xi_norm,
+        }
+        return losses, debug_tensors
 
     def _weighted(self, losses: dict[str, torch.Tensor], key: str, default: float) -> torch.Tensor:
         return losses[key] * self.l_w.get(key, default)
@@ -393,9 +440,22 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
         detach_tube = self.training_stage == "flow" and self.freeze_tube_predictor
         tube = self._predict_tube(cond, detach_tube=detach_tube)
         losses = self._tube_losses(pos, rot, gripper, tube)
+        debug_tensors = {
+            "cond": cond,
+            "target_pos": pos,
+            "target_rot": rot,
+            "target_gripper": gripper,
+            "mu_p": tube["mu_p"],
+            "mu_R": tube["mu_R"],
+            "mu_R_6d": tube["mu_R_6d"],
+        }
+        if "mu_g" in tube:
+            debug_tensors["mu_g"] = tube["mu_g"]
 
         if self.training_stage in ["flow", "joint"]:
-            losses.update(self._flow_losses(cond, pos, rot, gripper, tube))
+            flow_losses, flow_debug_tensors = self._flow_losses(cond, pos, rot, gripper, tube)
+            losses.update(flow_losses)
+            debug_tensors.update(flow_debug_tensors)
             total = self._flow_loss_total(losses)
             if self.training_stage == "joint":
                 total = total + self._tube_loss_total(losses)
@@ -403,6 +463,10 @@ class TubeLocalFlowPolicy(ComposerModel, BasePolicy):
             total = self._tube_loss_total(losses)
 
         losses["total"] = total
+        debug_tensors.update({f"loss_{key}": value for key, value in losses.items()})
+        force_debug = not torch.isfinite(total).all().item()
+        self._debug_policy_stats("calculate_loss", debug_tensors, force=force_debug)
+        self._debug_step += 1
         return losses
 
     # ############### Inference ################

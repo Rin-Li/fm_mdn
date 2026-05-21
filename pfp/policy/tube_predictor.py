@@ -32,11 +32,11 @@ class TubePredictor(nn.Module):
         self._init_head(head)
 
     def _init_head(self, head: nn.Linear) -> None:
-        nn.init.normal_(head.weight, mean=0.0, std=1e-3)
+        nn.init.zeros_(head.weight)
         nn.init.zeros_(head.bias)
         with torch.no_grad():
             bias = head.bias.view(self.horizon, self.out_dim)
-            identity_6d = torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0])
+            identity_6d = torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0], device=bias.device)
             bias[:, 3:9] = identity_6d
 
     def forward(self, cond: torch.Tensor) -> dict[str, torch.Tensor]:

@@ -18,6 +18,8 @@
   flow_gripper_mode: last_obs  # last_obs | zero
   init_ckpt_name: null
   init_ckpt_episode: latest-rank0.pt
+  debug_stats: False
+  debug_stats_interval: 1
   tube_radius: 1.0471975512  # pi / 3
   residual_radius_factor: 0.8
   n_ctrl: 8

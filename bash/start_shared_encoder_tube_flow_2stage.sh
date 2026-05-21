@@ -9,6 +9,11 @@ stage1_epochs=${5:-500}
 stage2_epochs=${6:-1500}
 run_prefix=${7:-"${task_name}_shared_encoder_tube_flow_$(date +%Y%m%d_%H%M%S)"}
 log_wandb=${PFP_LOG_WANDB:-True}
+debug_stats=${PFP_DEBUG_STATS:-False}
+debug_stats_interval=${PFP_DEBUG_STATS_INTERVAL:-1}
+stage1_use_ema=${PFP_STAGE1_USE_EMA:-False}
+stage2_use_ema=${PFP_STAGE2_USE_EMA:-True}
+n_points_override=${PFP_N_POINTS:-}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 script_path="${repo_dir}/bash/$(basename "${BASH_SOURCE[0]}")"
@@ -69,28 +74,48 @@ echo "Stage 2 epochs: ${stage2_epochs}"
 echo "K steps: ${k_steps}"
 echo "Eval seeds: ${num_seeds} random seeds"
 echo "W&B logging: ${log_wandb}"
+echo "Debug stats: ${debug_stats}, interval=${debug_stats_interval}"
+echo "EMA: stage1=${stage1_use_ema}, stage2=${stage2_use_ema}"
+if [[ -n "${n_points_override}" ]]; then
+    echo "Point cloud points override: ${n_points_override}"
+fi
 
-python scripts/train.py \
-    log_wandb="${log_wandb}" \
-    dataloader.num_workers=8 \
-    task_name="${task_name}" \
-    run_name="${stage1_run}" \
-    epochs="${stage1_epochs}" \
-    save_each_n_epochs="${stage1_epochs}" \
-    auto_eval=False \
+stage1_overrides=(
+    log_wandb="${log_wandb}"
+    dataloader.num_workers=8
+    task_name="${task_name}"
+    run_name="${stage1_run}"
+    epochs="${stage1_epochs}"
+    save_each_n_epochs="${stage1_epochs}"
+    use_ema="${stage1_use_ema}"
+    auto_eval=False
+    model.debug_stats="${debug_stats}"
+    model.debug_stats_interval="${debug_stats_interval}"
     +experiment=shared_encoder_tube_local_flow
-
-python scripts/train.py \
-    log_wandb="${log_wandb}" \
-    dataloader.num_workers=8 \
-    task_name="${task_name}" \
-    run_name="${stage2_run}" \
-    epochs="${stage2_epochs}" \
-    save_each_n_epochs="${stage2_epochs}" \
-    auto_eval=False \
-    +experiment=shared_encoder_tube_local_flow_stage2 \
-    model.init_ckpt_name="${stage1_run}" \
+)
+stage2_overrides=(
+    log_wandb="${log_wandb}"
+    dataloader.num_workers=8
+    task_name="${task_name}"
+    run_name="${stage2_run}"
+    epochs="${stage2_epochs}"
+    save_each_n_epochs="${stage2_epochs}"
+    use_ema="${stage2_use_ema}"
+    auto_eval=False
+    model.debug_stats="${debug_stats}"
+    model.debug_stats_interval="${debug_stats_interval}"
+    +experiment=shared_encoder_tube_local_flow_stage2
+    model.init_ckpt_name="${stage1_run}"
     model.init_ckpt_episode=latest-rank0.pt
+)
+if [[ -n "${n_points_override}" ]]; then
+    stage1_overrides+=(dataset.n_points="${n_points_override}")
+    stage2_overrides+=(dataset.n_points="${n_points_override}")
+fi
+
+python scripts/train.py "${stage1_overrides[@]}"
+
+python scripts/train.py "${stage2_overrides[@]}"
 
 mapfile -t seeds < <(
     python - "${num_seeds}" <<'PY'

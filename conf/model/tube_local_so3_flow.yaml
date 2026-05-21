@@ -21,6 +21,8 @@
   sigma_r: 0.15
   sigma_g: 0.1
   inference_init: zero  # zero | smooth_noise
+  debug_stats: False
+  debug_stats_interval: 1
 
   obs_encoder: ${backbone}
 

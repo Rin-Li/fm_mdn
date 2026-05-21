@@ -8,6 +8,8 @@ k_steps=${4:-50}
 num_seeds=${5:-5}
 run_name=${6:-"${task_name}_${experiment}_$(date +%Y%m%d_%H%M%S)"}
 log_wandb=${PFP_LOG_WANDB:-True}
+debug_stats=${PFP_DEBUG_STATS:-False}
+debug_stats_interval=${PFP_DEBUG_STATS_INTERVAL:-1}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 script_path="${repo_dir}/bash/$(basename "${BASH_SOURCE[0]}")"
@@ -61,6 +63,7 @@ echo "Run name: ${run_name}"
 echo "K steps: ${k_steps}"
 echo "Eval seeds: ${num_seeds} random seeds"
 echo "W&B logging: ${log_wandb}"
+echo "Debug stats: ${debug_stats}, interval=${debug_stats_interval}"
 
 python scripts/train.py \
     log_wandb="${log_wandb}" \
@@ -68,6 +71,8 @@ python scripts/train.py \
     task_name="${task_name}" \
     run_name="${run_name}" \
     auto_eval=False \
+    model.debug_stats="${debug_stats}" \
+    model.debug_stats_interval="${debug_stats_interval}" \
     +experiment="${experiment}"
 
 mapfile -t seeds < <(
