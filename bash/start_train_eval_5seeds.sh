@@ -7,7 +7,7 @@ experiment=${3:-tube_local_so3_flow}
 k_steps=${4:-50}
 num_seeds=${5:-5}
 run_name=${6:-"${task_name}_${experiment}_$(date +%Y%m%d_%H%M%S)"}
-log_wandb=${PFP_LOG_WANDB:-False}
+log_wandb=${PFP_LOG_WANDB:-True}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 script_path="${repo_dir}/bash/$(basename "${BASH_SOURCE[0]}")"

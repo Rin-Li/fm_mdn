@@ -8,7 +8,7 @@ num_seeds=${4:-5}
 stage1_epochs=${5:-500}
 stage2_epochs=${6:-1500}
 run_prefix=${7:-"${task_name}_shared_encoder_tube_flow_$(date +%Y%m%d_%H%M%S)"}
-log_wandb=${PFP_LOG_WANDB:-False}
+log_wandb=${PFP_LOG_WANDB:-True}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 script_path="${repo_dir}/bash/$(basename "${BASH_SOURCE[0]}")"
