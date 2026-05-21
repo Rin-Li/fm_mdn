@@ -87,7 +87,7 @@ def _so3_log_near_pi(rot: torch.Tensor, theta: torch.Tensor, eps: float) -> torc
 def so3_log(rot: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     """Log map from rotation matrices (..., 3, 3) to axis-angle vectors."""
     trace = rot[..., 0, 0] + rot[..., 1, 1] + rot[..., 2, 2]
-    cos_theta = ((trace - 1.0) * 0.5).clamp(min=-1.0, max=1.0)
+    cos_theta = ((trace - 1.0) * 0.5).clamp(min=-1.0 + 1e-6, max=1.0 - 1e-6)
     theta = torch.acos(cos_theta)
     sin_theta = torch.sin(theta)
 

@@ -13,6 +13,9 @@ debug_stats=${PFP_DEBUG_STATS:-False}
 debug_stats_interval=${PFP_DEBUG_STATS_INTERVAL:-1}
 stage1_use_ema=${PFP_STAGE1_USE_EMA:-False}
 stage2_use_ema=${PFP_STAGE2_USE_EMA:-True}
+stage1_freeze_encoder=${PFP_STAGE1_FREEZE_ENCODER:-True}
+stage1_lr=${PFP_STAGE1_LR:-1.0e-5}
+stage2_lr=${PFP_STAGE2_LR:-3.0e-5}
 n_points_override=${PFP_N_POINTS:-}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -76,6 +79,8 @@ echo "Eval seeds: ${num_seeds} random seeds"
 echo "W&B logging: ${log_wandb}"
 echo "Debug stats: ${debug_stats}, interval=${debug_stats_interval}"
 echo "EMA: stage1=${stage1_use_ema}, stage2=${stage2_use_ema}"
+echo "Stage 1 freeze encoder: ${stage1_freeze_encoder}"
+echo "Learning rates: stage1=${stage1_lr}, stage2=${stage2_lr}"
 if [[ -n "${n_points_override}" ]]; then
     echo "Point cloud points override: ${n_points_override}"
 fi
@@ -88,7 +93,9 @@ stage1_overrides=(
     epochs="${stage1_epochs}"
     save_each_n_epochs="${stage1_epochs}"
     use_ema="${stage1_use_ema}"
+    optimizer.lr="${stage1_lr}"
     auto_eval=False
+    model.freeze_obs_encoder="${stage1_freeze_encoder}"
     model.debug_stats="${debug_stats}"
     model.debug_stats_interval="${debug_stats_interval}"
     +experiment=shared_encoder_tube_local_flow
@@ -101,6 +108,7 @@ stage2_overrides=(
     epochs="${stage2_epochs}"
     save_each_n_epochs="${stage2_epochs}"
     use_ema="${stage2_use_ema}"
+    optimizer.lr="${stage2_lr}"
     auto_eval=False
     model.debug_stats="${debug_stats}"
     model.debug_stats_interval="${debug_stats_interval}"
