@@ -18,6 +18,8 @@ stage1_lr=${PFP_STAGE1_LR:-1.0e-4}
 stage2_lr=${PFP_STAGE2_LR:-3.0e-5}
 stage1_warmup=${PFP_STAGE1_WARMUP:-0}
 stage2_warmup=${PFP_STAGE2_WARMUP:-5000}
+stage1_save_each=${PFP_STAGE1_SAVE_EACH:-50}
+stage2_save_each=${PFP_STAGE2_SAVE_EACH:-100}
 n_points_override=${PFP_N_POINTS:-}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -76,6 +78,7 @@ echo "Stage 1 run: ${stage1_run}"
 echo "Stage 2 run: ${stage2_run}"
 echo "Stage 1 epochs: ${stage1_epochs}"
 echo "Stage 2 epochs: ${stage2_epochs}"
+echo "Save intervals: stage1=${stage1_save_each} epochs, stage2=${stage2_save_each} epochs"
 echo "K steps: ${k_steps}"
 echo "Eval seeds: ${num_seeds} random seeds"
 echo "W&B logging: ${log_wandb}"
@@ -94,7 +97,7 @@ stage1_overrides=(
     task_name="${task_name}"
     run_name="${stage1_run}"
     epochs="${stage1_epochs}"
-    save_each_n_epochs="${stage1_epochs}"
+    save_each_n_epochs="${stage1_save_each}"
     use_ema="${stage1_use_ema}"
     optimizer.lr="${stage1_lr}"
     lr_scheduler.num_warmup_steps="${stage1_warmup}"
@@ -110,7 +113,7 @@ stage2_overrides=(
     task_name="${task_name}"
     run_name="${stage2_run}"
     epochs="${stage2_epochs}"
-    save_each_n_epochs="${stage2_epochs}"
+    save_each_n_epochs="${stage2_save_each}"
     use_ema="${stage2_use_ema}"
     optimizer.lr="${stage2_lr}"
     lr_scheduler.num_warmup_steps="${stage2_warmup}"
