@@ -18,8 +18,8 @@ stage1_lr=${PFP_STAGE1_LR:-1.0e-4}
 stage2_lr=${PFP_STAGE2_LR:-3.0e-5}
 stage1_warmup=${PFP_STAGE1_WARMUP:-0}
 stage2_warmup=${PFP_STAGE2_WARMUP:-5000}
-stage1_save_each=${PFP_STAGE1_SAVE_EACH:-10}
-stage2_save_each=${PFP_STAGE2_SAVE_EACH:-10}
+stage1_save_each=${PFP_STAGE1_SAVE_EACH:-20}
+stage2_save_each=${PFP_STAGE2_SAVE_EACH:-20}
 n_points_override=${PFP_N_POINTS:-}
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
